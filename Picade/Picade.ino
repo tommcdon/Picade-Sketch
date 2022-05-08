@@ -3,6 +3,8 @@
 #include <EEPROM.h>
 #include <Keyboard.h>
 
+#define DEBUG
+
 /* Comment out this line if you want to bind the volume buttons to keys */
 #define ENABLE_VOLUME_BUTTONS
 
@@ -41,7 +43,9 @@ static input inputs[] = {
 
 void setup() {
 
-  //Serial.begin(9600);
+#ifdef DEBUG
+  Serial.begin(9600);
+#endif
   
   for(int i = 0; i < sizeof(inputs) / sizeof(input); i++){
     pinMode(inputs[i].pin, INPUT_PULLUP);
@@ -81,6 +85,11 @@ void update(void){
       inputs[i].state = state; // update our state map so we know what's happening with this key in future
       inputs[i].last_change = millis();
       // send the key press or release event
+#ifdef DEBUG
+      char buf[256];
+      sprintf(buf, "Key %d = state %d\n", i, state);
+      Serial.println(buf);
+#endif
       if(state){ Keyboard.press(inputs[i].key);}else{Keyboard.release(inputs[i].key);}
     }
   }
@@ -131,10 +140,26 @@ void loop() {
   }
 
   if(volume_target > volume_current){
+#ifdef DEBUG
+    char buf[128];
+    sprintf(buf, "Volume Up %d\n", volume_target);
+    Serial.println(buf);
+#endif
     volume_up();
+    if (volume_target >= VOL_MAX){
+      volume_target = VOL_MAX;
+#ifdef DEBUG
+      Serial.println("Volume at max");
+#endif
+    }
   }
   
   if(volume_target < volume_current){
+#ifdef DEBUG
+    char buf[128];
+    sprintf(buf, "Volume Down %d\n", volume_target);
+    Serial.println(buf);
+#endif
     volume_down();
   }
 
@@ -142,6 +167,9 @@ void loop() {
   if(!headphone && volume_current == volume_target && volume_eeprom != volume_current && (millis() - last_vol_up_time) > 1000 && (millis() - last_vol_dn_time) > 1000){
     EEPROM.write(0, volume_current);
     volume_eeprom = volume_current;
+#ifdef DEBUG
+    Serial.println("Target Volume Reached");
+#endif
     int x = 2;
     while(x--){
       digitalWrite(BLINK_LED, HIGH);
